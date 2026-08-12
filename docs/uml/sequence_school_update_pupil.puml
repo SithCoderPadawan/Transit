@@ -1,0 +1,30 @@
+@startuml Sequence_School_UpdatePupil
+skinparam defaultFontName "Helvetica"
+
+actor "School Staff" as SS
+participant ":ConsoleMenu" as Menu
+participant ":PupilService" as Svc
+participant ":Pupil" as P
+
+SS -> Menu : select "Update pupil record"
+activate Menu
+Menu -> Svc : getPupil(pupilId)
+Svc --> Menu : pupil (with current version)
+Menu -> Svc : updatePupilRecord(user, pupilId, details, expectedVersion)
+activate Svc
+Svc -> Svc : checkScope(user, pupil.schoolId)
+
+alt same school as user, version matches
+    Svc -> P : applyDetails(details)
+    Svc --> Menu : update applied
+    Menu --> SS : "Pupil record updated"
+else different school
+    Svc --> Menu : throw UnauthorizedScopeException
+    Menu --> SS : "You may only edit pupils at your own school"
+else version does not match (stale read)
+    Svc --> Menu : throw StaleDataException
+    Menu --> SS : "Record changed since you read it -- please retry"
+end
+deactivate Svc
+deactivate Menu
+@enduml

@@ -1,0 +1,82 @@
+@startuml TransitUseCaseDiagram
+skinparam defaultFontName "Helvetica"
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+actor "Admin" as Admin
+actor "LEA Officer" as LEA
+actor "School Staff" as School
+actor "Parent" as Parent
+actor "Data Store" as DataStore #LightGrey
+
+rectangle "Transit System" {
+  usecase "Log in" as UC1
+  usecase "Verify credentials" as UC1a
+  usecase "Account locked" as UC1b
+
+  usecase "Manage system data" as UC2
+  usecase "Import pupil data (CSV)" as UC3
+  usecase "Enter school staff contacts" as UC4
+
+  usecase "Manage pupil & parent info" as UC5
+
+  usecase "Manage bus routes" as UC6
+  usecase "Move pupil to new route" as UC7
+  usecase "Handle capacity exceeded" as UC7a
+  usecase "Manage bus contracts" as UC8
+
+  usecase "View route & pickup point" as UC9
+
+  usecase "Generate report" as UC10
+  usecase "Full system report" as UC10a
+  usecase "Route & contract report" as UC10b
+  usecase "Own-pupil report" as UC10c
+  usecase "Child's route report" as UC10d
+}
+
+Admin --> UC1
+Admin --> UC2
+Admin --> UC3
+Admin --> UC4
+Admin --> UC10a
+
+LEA --> UC1
+LEA --> UC5
+LEA --> UC6
+LEA --> UC8
+LEA --> UC10b
+
+School --> UC1
+School --> UC5 : {scope: own school only}
+School --> UC10c
+
+Parent --> UC1
+Parent --> UC9
+Parent --> UC10d
+
+UC1  .> UC1a  : <<include>>
+UC1a .> UC1b  : <<extend>>
+UC7  .> UC6   : <<include>>
+UC7  .> UC7a  : <<extend>>
+
+UC10a --|> UC10
+UC10b --|> UC10
+UC10c --|> UC10
+UC10d --|> UC10
+
+' ---- Secondary actor: shows how data is actually connected ----
+UC3  --> DataStore : writes pupil records to
+UC7  --> DataStore : updates route assignments in
+UC5  --> DataStore : reads/writes pupil records in
+UC10 --> DataStore : reads data from
+
+note right of DataStore
+  Represents TransportDataStore --
+  the shared in-memory data repository
+  every service reads from / writes to.
+  Makes explicit where report data
+  and imported data actually go.
+end note
+
+@enduml

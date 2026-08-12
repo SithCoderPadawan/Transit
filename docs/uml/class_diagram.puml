@@ -1,0 +1,149 @@
+@startuml Class_Diagram
+skinparam defaultFontName "Helvetica"
+skinparam classAttributeIconSize 0
+
+abstract class User {
+    # userId: String
+    # name: String
+    # email: String
+    + hasPermission(p: Permission): boolean
+    + {abstract} getRoleLabel(): String
+}
+
+class Admin extends User
+class LEAOfficer extends User
+class SchoolStaff extends User {
+    - schoolId: String
+}
+class Parent extends User {
+    - childIds: List<String>
+}
+
+class Pupil {
+    - pupilId: String
+    - name: String
+    - emergencyContact: String
+    - version: int
+    + getRoute(): Route
+}
+
+' ---- FIX: the missing Parent-Pupil connection ----
+Parent "1" o-- "1..*" Pupil : guardian of \n (childIds)
+
+class Route {
+    - routeId: String
+    - capacity: int
+    + addStop(s: Stop)
+    + addPupil(p: Pupil)
+}
+class Stop {
+    - location: String
+    - pickupTime: Time
+}
+class School {
+    - schoolId: String
+    - name: String
+    - type: SchoolType
+}
+class SchoolContact {
+    - name: String
+    - role: String
+    - email: String
+    - phone: String
+}
+class Bus {
+    - regPlate: String
+    - capacity: int
+}
+class Driver {
+    - name: String
+    - licenceNo: String
+}
+class BusContractor {
+    - companyName: String
+    - performanceRating: int
+    + reviewPerformance()
+}
+
+Route "1" *-- "1..*" Stop
+Route "1" o-- "0..1" Bus
+Bus "1" -- "1" Driver
+BusContractor "1" o-- "0..*" Bus : operates >
+Pupil "0..*" -- "1" Route : transports >
+Pupil "0..*" -- "1" School : enrolled at >
+School "1" o-- "0..*" SchoolContact
+
+interface PermissionStrategy {
+    + resolvePermissions(): Set<Permission>
+}
+class AdminPermissionStrategy implements PermissionStrategy
+class LEAPermissionStrategy implements PermissionStrategy
+class SchoolPermissionStrategy implements PermissionStrategy
+class ParentPermissionStrategy implements PermissionStrategy
+
+enum Permission {
+    VIEW_ROUTES
+    EDIT_OWN_PUPIL_RECORDS
+    EDIT_ANY_PUPIL_RECORDS
+    MANAGE_ROUTES
+    MANAGE_CONTRACTS
+    CORRECT_ANY_DATA
+    VIEW_REPORTS
+}
+
+User "1" o-- "1" PermissionStrategy : uses >
+LEAPermissionStrategy ..> SchoolPermissionStrategy : reuses (superset,\nreq. 2c)
+
+class UserFactory {
+    + {static} createUser(role: Role, ...): User
+}
+UserFactory ..> User : creates >
+
+class AuthService {
+    - credentialStore: CredentialStore
+    + login(username: String, password: String): User
+}
+class CredentialStore {
+    - credentials: Map<String, Credential>
+    + find(username: String): Credential
+}
+AuthService o-- CredentialStore
+AuthService ..> UserFactory : uses >
+
+class PupilService {
+    + getPupil(pupilId: String): Pupil
+    + updatePupilRecord(user: User, pupilId: String, details: PupilDetails, expectedVersion: int)
+    - checkScope(user: User, schoolId: String)
+}
+PupilService --> Pupil
+PupilService ..> StaleDataException : throws >
+
+class RouteManager {
+    + movePupilToRoute(pupilId: String, newRouteId: String)
+    + getRouteForPupil(pupilId: String): Route
+}
+RouteManager --> Route
+
+class ReportService {
+    + generateReport(user: User): List<String>
+}
+ReportService --> Pupil
+ReportService --> Route
+ReportService --> BusContractor
+
+class CsvImportService {
+    + importPupilsFromCsv(filePath: String): int
+}
+CsvImportService ..> CsvFormatException : throws >
+
+class InvalidCredentialsException <<exception>>
+class AccountLockedException <<exception>>
+class InvalidRoleException <<exception>>
+class RouteCapacityException <<exception>>
+class InvalidRouteException <<exception>>
+class UnauthorizedScopeException <<exception>>
+class InvalidSchoolException <<exception>>
+class StaleDataException <<exception>>
+class CsvFormatException <<exception>>
+
+@enduml

@@ -1,0 +1,32 @@
+@startuml Sequence_LEA_MovePupil
+skinparam defaultFontName "Helvetica"
+
+actor "LEA Officer" as LEA
+participant ":ConsoleMenu" as Menu
+participant ":RouteManager" as Mgr
+participant "newRoute:Route" as NewR
+participant "oldRoute:Route" as OldR
+
+LEA -> Menu : select "Move pupil to new route"
+activate Menu
+Menu -> Mgr : movePupilToRoute(pupilId, newRouteId)
+activate Mgr
+
+Mgr -> NewR : addPupil(pupil)
+activate NewR
+
+alt capacity available
+    NewR --> Mgr : pupil added
+    Mgr -> OldR : removePupil(pupil)
+    Mgr -> NewR : pupil.setRouteId(newRouteId)
+    Mgr --> Menu : reassignment confirmed
+    Menu --> LEA : "Pupil reassigned to route " + newRouteId
+else capacity exceeded
+    NewR --> Mgr : throw RouteCapacityException
+    Mgr --> Menu : propagate RouteCapacityException
+    Menu --> LEA : "Route is at full capacity"
+end
+deactivate NewR
+deactivate Mgr
+deactivate Menu
+@enduml
